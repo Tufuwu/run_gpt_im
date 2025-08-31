@@ -9,31 +9,55 @@ on:
       - main
 
 jobs:
-  test:
-    runs-on: ubuntu-22.04
+  build:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8, 3.8, 3.8]
+        python-version: [3.8, 3.8, 3.8, 3.8, 3.9]
         include:
           - python-version: 3.8
-            env: TOXENV=py38
+            geos-version: 3.8.2
+            numpy-version: 1.10.4
           - python-version: 3.8
-            env: TOXENV=py38
+            geos-version: 3.8.4
+            numpy-version: 1.13.3
           - python-version: 3.8
-            env: TOXENV=py38,docs,style
-
+            geos-version: 3.8.3
+            numpy-version: 1.15.4
+          - python-version: 3.8
+            geos-version: 3.8.1
+            numpy-version: 1.17.5
+          - python-version: 3.9
+            geos-version: 3.8.1
+            numpy-version: 1.19.4
+          - python-version: 3.8
+            geos-version: main
     steps:
-      - uses: actions/checkout@v3
+    - uses: actions/checkout@v3
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
 
-      - name: Install dependencies
-        run: pip install tox
+    - name: Install dependencies
+      run: |
+        export GEOS_INSTALL=$HOME/geosinstall/geos-${{ matrix.geos-version }}
+        ./ci/install_geos.sh
+        pip install --disable-pip-version-check --upgrade pip
+        pip install --upgrade wheel
+        if [ "${{ matrix.geos-version }}" = "main" ]; then
+          pip install --upgrade --pre Cython numpy pytest
+        else
+          pip install --upgrade Cython "numpy==${{ matrix.numpy-version }}" pytest
+        fi
+        export LD_LIBRARY_PATH=$GEOS_INSTALL/lib
+        export PATH=$GEOS_INSTALL/bin:$PATH
+        python setup.py build_ext --inplace
+        pip install --no-deps -e .
 
-      - name: Run tests
-        env:
-          TOXENV: ${{ matrix.env }}
-        run: tox
+    - name: Test with pytest
+      run: pytest --doctest-modules
+      env:
+        LD_LIBRARY_PATH: ${{ env.LD_LIBRARY_PATH }}
+        PATH: ${{ env.PATH }}
