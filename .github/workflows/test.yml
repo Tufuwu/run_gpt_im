@@ -1,4 +1,4 @@
-name: Python CI
+name: Python package
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: [3.8, 3.8, 3.8]
+        python-version: [3.8, 3.8, 3.8, 3.9]
 
     steps:
     - uses: actions/checkout@v3
@@ -26,10 +26,13 @@ jobs:
 
     - name: Install dependencies
       run: |
-        ./scripts/install_radare2.sh
-        pip install -r python/requirements_ci.txt
-        cd python && python setup.py install
+        python -m pip install --upgrade pip wheel coverage codecov
+        pip install -r requirements.txt pytest pytest-mock
+        python setup.py develop
 
-    - name: Run tests
+    - name: Test with pytest
       run: |
-        cd test && make tests
+        coverage run -m pytest -v tests/
+        codecov
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
