@@ -9,11 +9,16 @@ on:
       - main
 
 jobs:
-  build:
-    runs-on: ubuntu-22.04
+  test:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8, 3.8, 3.9, 3.10]
+        python-version: [3.8, 3.8, 3.8, 3.8, 3.8]
+        include:
+          - python-version: 3.8
+            env: TOXENV=flake8
+          - python-version: 3.8
+            env: TOXENV=isort
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
@@ -22,29 +27,14 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        pip install -r mock/requirements.txt
-        pip install pytest-cov
+        python -m pip install --upgrade pip
+        pip install tox-travis
+        pip install coveralls
     - name: Run tests
-      run: |
-        PYTHON=python${{ matrix.python-version }} ./mock/run-tests.sh
-
-  copr-build:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-22.04
-    strategy:
-      matrix:
-        package: [mock, mock-core-configs]
-    steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python 3.9
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.9
-    - name: Install dependencies
-      run: |
-        pip install -r mock/requirements.txt
-        pip install pytest-cov
-    - name: Build RPM in Copr
+      run: tox
+    - name: Upload coverage to Coveralls
+      if: success() && matrix.python-version == '3.8'
       env:
-        PACKAGE: ${{ matrix.package }}
-      run: .travis/copr-build
+        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+      run: |
+        if [ -e .coverage ]; then coveralls; fi
