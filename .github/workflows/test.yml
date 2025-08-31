@@ -11,10 +11,10 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
-        python-version: [3.8, 3.8, 3.8, 3.8]
-        requirements-file: [minimal_requirements.txt, requirements.txt]
+        python-version: [3.8, 3.8, 3.8, 3.8, 3.9, '3.x']
 
     steps:
     - uses: actions/checkout@v3
@@ -26,16 +26,9 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install -r ${{ matrix.requirements-file }}
+        python -m pip install --upgrade pip
         pip install --upgrade pytest
-        pip install pytest-cov
+        pip install --editable .
 
-    - name: Run tests
-      env:
-        MPLBACKEND: Agg
-      run: python -m pytest --cov=fgivenx
-
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
+    - name: Test with pytest
+      run: pytest
