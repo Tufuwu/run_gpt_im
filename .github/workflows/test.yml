@@ -1,4 +1,4 @@
-name: CI
+name: Python CI
 
 on:
   push:
@@ -10,37 +10,23 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-22.04
-    services:
-      docker:
-        image: docker:stable
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8, 3.8, 3.8, 3.9]
     steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.8'
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-      - name: Run tests
-        run: ./tests/run_tests.sh
-
-  deploy:
-    runs-on: ubuntu-22.04
-    needs: test
-    steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.8'
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-      - name: Build package
-        run: python setup.py install_egg_info sdist bdist_wheel
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          password: ${{ secrets.PYPI_TOKEN }}
-        env:
-          TWINE_USERNAME: '__token__'
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+    - name: Run tests
+      run: python -m unittest test_asserts
+    - name: Run mypy
+      run: mypy asserts test_asserts.py
+    - name: Run flake8
+      run: flake8 asserts test_asserts.py
+    - name: Run doctest
+      run: python -m doctest asserts/__init__.py
