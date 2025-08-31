@@ -9,37 +9,23 @@ on:
       - main
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
-
     strategy:
       matrix:
-        python-version: ['3.8', '3.8', '3.9']
-
+        python-version: [3.8, 3.8, 3.8, 3.8, 3.8]
+        toxenv: [py38, py38, py38, py38, py38, flake8, isort, black]
     steps:
     - uses: actions/checkout@v3
-
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
-
     - name: Install dependencies
       run: |
-        if [ "${{ matrix.python-version }}" == "3.8" ]; then
-          pip install 'setuptools<=60.9.0'
-        fi
-        python setup.py -q install
-        pip install pylint yapf pytype
-
-    - name: Run tests
-      run: python setup.py test
-
-    - name: Lint with pylint
-      run: pylint comment_parser
-
-    - name: Type check with pytype
-      run: pytype
-
-    - name: Format code with yapf
-      run: yapf -drp comment_parser
+        python -m pip install --upgrade pip
+        pip install tox
+    - name: Run Tox
+      env:
+        TOXENV: ${{ matrix.toxenv }}
+      run: tox
