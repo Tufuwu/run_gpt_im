@@ -1,4 +1,4 @@
-name: Python CI
+name: Python package
 
 on:
   push:
@@ -10,19 +10,11 @@ on:
 
 jobs:
   build:
+    runs-on: ubuntu-22.04
+
     strategy:
       matrix:
-        os: [ubuntu-latest]
-        python-version: [3.8, 3.9, 3.8, 3.8, 3.8, 3.8, pypy-3.6]
-        include:
-          - os: ubuntu-latest
-            python-version: 3.8
-            arch: arm64
-          - os: ubuntu-latest
-            python-version: 3.8
-            arch: amd64
-
-    runs-on: ${{ matrix.os }}
+        python-version: [3.8, 3.8, 3.8, 3.8]
 
     steps:
     - uses: actions/checkout@v3
@@ -31,12 +23,18 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
-        architecture: ${{ matrix.arch || 'x64' }}
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install mock
+        sudo apt-get update -qq
+        sudo apt-get install -qq libhdf5-serial-dev
+        python -m pip install --upgrade pip setuptools wheel virtualenv
+        pip install tox tox-travis codecov
 
-    - name: Run tests
-      run: python -m unittest discover -p '*_test.py'
+    - name: Run tests with tox
+      run: tox
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
