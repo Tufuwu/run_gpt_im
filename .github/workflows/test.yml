@@ -9,37 +9,83 @@ on:
       - main
 
 jobs:
-  test:
+  flake8:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8, 3.8, 3.8, 3.8, '3.8']
-        django-version: [2.2, 3.0, 'main']
-        include:
-          - python-version: 3.8
-            toxenv: docs
-          - python-version: 3.8
-            toxenv: quality
-      allow_failures:
-        - python-version: '3.8'
-        - django-version: 'main'
+        python-version: [3.8]
     steps:
       - uses: actions/checkout@v3
-
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install tox
+      - name: Run flake8
+        run: tox -e flake8
 
-      - name: Run tests
+  black:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
         run: |
-          if [ -n "${{ matrix.toxenv }}" ]; then
-            tox -e ${{ matrix.toxenv }}
-          else
-            tox
-          fi
+          python -m pip install --upgrade pip
+          pip install tox
+      - name: Run black
+        run: tox -e black
+
+  elasticsearch:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8]
+    services:
+      elasticsearch:
+        image: elasticsearch:7.3.2
+        ports:
+          - 9200:9200
+        options: --name elasticsearch -e "discovery.type=single-node"
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install tox
+      - name: Wait for Elasticsearch
+        run: sleep 60
+      - name: Run elasticsearch tests
+        run: tox -e elasticsearch
+
+  codecov:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.8
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install tox codecov
+      - name: Run tests
+        run: tox
+      - name: Upload coverage to Codecov
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: codecov
