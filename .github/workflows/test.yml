@@ -9,12 +9,12 @@ on:
       - main
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        python-version: [3.8, 3.8, 3.8, 3.8, 3.9, '3.x']
+        python-version: [3.8]
 
     steps:
     - uses: actions/checkout@v3
@@ -26,9 +26,16 @@ jobs:
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install --upgrade pytest
-        pip install --editable .
+        sudo apt-get update
+        sudo apt-get install -y libeigen3-dev
+        pip install -r requirements.txt
+        pip install pytest pytest-cov pytest-randomly wheel codecov
+        pip install -e .
 
-    - name: Test with pytest
-      run: pytest
+    - name: Run tests
+      run: make coverage
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
