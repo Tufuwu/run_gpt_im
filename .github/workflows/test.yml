@@ -4,31 +4,18 @@ on:
   push:
     branches:
       - main
+    tags:
+      - '*'
   pull_request:
     branches:
       - main
-  release:
-    types: [created]
 
 jobs:
   test:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        python-version: ['3.8', '3.8', '3.8', '3.8']
-        include:
-          - python-version: '3.8'
-            ipython-version: '7.9'
-            pandas-version: '0.24.2'
-          - python-version: '3.8'
-            ipython-version: '7'
-            pandas-version: '1'
-          - python-version: '3.8'
-            ipython-version: '7'
-            pandas-version: '1'
-          - python-version: '3.8'
-            ipython-version: '7'
-            pandas-version: '1'
+        python-version: ['3.8', '3.8', '3.8', '3.8', '3.8', '3.9']
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
@@ -37,18 +24,15 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        pip install IPython==${{ matrix.ipython-version }}
-        pip install pandas==${{ matrix.pandas-version }}
-        pip install .[test]
-    - name: Run tests
-      run: |
-        python -c 'import pytorch_memlab'
-        pytest test/test_mem_reporter.py
+        python -m pip install --upgrade pip
+        pip install .
+    - name: Test with setup.py
+      run: python setup.py test
 
   deploy:
     runs-on: ubuntu-22.04
     needs: test
-    if: github.event_name == 'release'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && startsWith(github.ref, 'refs/tags/')
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python 3.8
@@ -57,11 +41,13 @@ jobs:
         python-version: 3.8
     - name: Install dependencies
       run: |
-        pip install IPython==7
-        pip install pandas==1
-        pip install .[test]
-    - name: Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@v1.5.0
-      with:
-        password: ${{ secrets.PYPI_API_TOKEN }}
+        python -m pip install --upgrade pip
+        pip install .
+    - name: Build and publish
+      env:
+        TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+      run: |
+        python setup.py sdist bdist_wheel
+        twine upload --skip-existing dist/*
 
