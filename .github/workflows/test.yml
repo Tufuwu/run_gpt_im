@@ -1,4 +1,4 @@
-name: CI
+name: Python package
 
 on:
   push:
@@ -9,44 +9,32 @@ on:
       - main
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        python-version: [3.8, 3.8]
+        python-version: [3.8, 3.8, 3.8]
+        django-version: [django21, django22, django30, django31]
 
     steps:
     - uses: actions/checkout@v2
-      with:
-        fetch-depth: 0 # Fetch all history for SonarCloud analysis
-
-    - name: Set up JDK 1.8
-      uses: actions/setup-java@v3
-      with:
-        java-version: '8'
-        distribution: 'oracle'
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Install dependencies
-      run: bash scripts/install.sh
+      run: |
+        python -m pip install --upgrade pip
+        pip install tox coverage
 
     - name: Run tests
-      run: bash scripts/run_tests.sh
-
-    - name: SonarCloud Scan
       env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      run: |
-        if [ "${{ github.event_name }}" = "push" ]; then
-          sonar-scanner
-        fi
+        TOX_ENV: py${{ matrix.python-version }}-${{ matrix.django-version }}
+      run: tox -r -e $TOX_ENV
 
-    - name: Cache SonarCloud
-      uses: actions/cache@v3
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v2
       with:
-        path: ~/.sonar/cache
-        key: ${{ runner.os }}-sonar-cache
+        token: ${{ secrets.CODECOV_TOKEN }}
