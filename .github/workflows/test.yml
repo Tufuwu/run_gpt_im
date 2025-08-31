@@ -1,20 +1,46 @@
-name: Python CI
+name: CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-
+  test:
+    runs-on: ubuntu-22.04
+    services:
+      docker:
+        image: docker:stable
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v2
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run tests
+        run: ./tests/run_tests.sh
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.x'
-
-    - name: Run script
-      run: |
-        echo "from Default.settings import *" > settings.py
-        python generate.py
+  deploy:
+    runs-on: ubuntu-22.04
+    needs: test
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Build package
+        run: python setup.py install_egg_info sdist bdist_wheel
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_TOKEN }}
+        env:
+          TWINE_USERNAME: '__token__'
