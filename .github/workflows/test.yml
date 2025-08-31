@@ -1,4 +1,4 @@
-name: Python application
+name: Python CI
 
 on:
   push:
@@ -26,11 +26,14 @@ jobs:
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-
-    - name: Install package
-      run: python setup.py develop
+        if [ "${{ matrix.python-version }}" == "3.8" ]; then
+          pip install black mypy
+        fi
+        pip install --editable .[dev]
 
     - name: Run tests
-      run: nosetests
+      run: make check-tests
+
+    - name: Run additional checks
+      if: matrix.python-version == '3.8'
+      run: make check
