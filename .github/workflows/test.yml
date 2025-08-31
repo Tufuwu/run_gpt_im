@@ -10,10 +10,10 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
-        python-version: ['3.8', '3.8', '3.8', '3.8', '3.9', 'pypy-3.6']
+        python-version: ['3.8', '3.8', '3.8', '3.8', '3.8', '3.9', 'pypy-3.8', 'pypy-3.6']
     steps:
       - uses: actions/checkout@v3
 
@@ -31,6 +31,6 @@ jobs:
         run: tox -e py
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: codecov
