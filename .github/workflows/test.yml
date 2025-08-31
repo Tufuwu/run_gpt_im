@@ -1,31 +1,51 @@
-name: Python package
+name: CI
 
 on:
   push:
     branches:
       - main
+      - /^v\d+\.\d+(\.(\d|x)+)?(-\S*)?$/
   pull_request:
     branches:
       - main
 
 jobs:
-  test:
-    runs-on: ubuntu-22.04
+  build:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: [3.8, 3.8, 3.8, 3.8, pypy-3.6]
-        django-version: [2.2, 3.0, 3.1, main]
-        exclude:
-          - python-version: 3.8
-            django-version: 3.0
-          - python-version: 3.8
-            django-version: 3.1
-          - python-version: 3.8
-            django-version: main
+        toxenv:
+          - lint,docs
+          - django20-py38-all
+          - django20-py38-all
+          - django20-pypy-3.6-all
+          - django21-py38-all
+          - django21-py38-all
+          - django21-py38-all
+          - django21-pypy-3.6-all
+          - django22-py38-all
+          - django22-py38-all
+          - django22-py38-all
+          - django22-pypy-3.6-all
+          - django30-py38-all
+          - django30-py38-all
+          - django30-py38-all
+          - django30-pypy-3.6-all
+          - django31-py38-all
+          - django31-py38-all
+          - django31-py38-all
+          - django31-pypy-3.6-all
+          - djangoDev-py38-all
+          - django31-py38-none
+          - django31-py38-amazon_ses
+          - django22-py38-all-old_urllib3
+    env:
+      TOX_FORCE_IGNORE_OUTCOME: false
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
@@ -33,9 +53,8 @@ jobs:
         python -m pip install --upgrade pip
         pip install tox
     - name: Run tests
-      env:
-        DJANGO: ${{ matrix.django-version }}
-      run: tox
+      run: tox -e ${{ matrix.toxenv }}
     allow_failures:
-      - python-version: pypy-3.6
-      - django-version: main
+      - matrix:
+          toxenv: djangoDev-py38-all
+          python-version: 3.8
