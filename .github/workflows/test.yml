@@ -13,79 +13,39 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8, 3.8, 3.8, 3.9]
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install tox-travis
-      - name: Run tests
-        run: tox
+        python-version: [3.8, 3.9]
+        architecture: [amd64, ppc64le]
 
-  lint:
-    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.8
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install tox-travis
-      - name: Run lint
-        run: tox -e lint
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-  docs:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.8
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install tox-travis
-      - name: Build docs
-        run: tox -e docs
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        architecture: ${{ matrix.architecture }}
 
-  isort:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.8
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install tox-travis
-      - name: Run isort
-        run: tox -e isort
+    - name: Install dependencies
+      run: pip install -r dev-requirements.txt
 
-  codecov:
-    runs-on: ubuntu-latest
-    if: success()
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.8
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install codecov
-      - name: Upload coverage to Codecov
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-        run: codecov
+    - name: Clean build artifacts
+      run: make clean
+
+    - name: Check PEP8 compliance
+      run: make pep8
+
+    - name: Run Flake8
+      run: make flake8
+
+    - name: Run checks
+      run: make check
+
+    - name: Run unittests
+      run: make unittest
+
+    - name: Upload coverage to Coveralls
+      if: success()
+      env:
+        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+      run: coveralls
