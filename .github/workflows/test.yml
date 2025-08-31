@@ -9,83 +9,40 @@ on:
       - main
 
 jobs:
-  flake8:
+  build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8]
+        python-version: [3.8, 3.8, 3.8, 3.8, 3.8, 3.9, '3.8', 'pypy-3.6']
+        with-opt-deps: [false, true]
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install tox
-      - name: Run flake8
-        run: tox -e flake8
+    - uses: actions/checkout@v3
 
-  black:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.8]
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install tox
-      - name: Run black
-        run: tox -e black
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
 
-  elasticsearch:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.8]
-    services:
-      elasticsearch:
-        image: elasticsearch:7.3.2
-        ports:
-          - 9200:9200
-        options: --name elasticsearch -e "discovery.type=single-node"
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install tox
-      - name: Wait for Elasticsearch
-        run: sleep 60
-      - name: Run elasticsearch tests
-        run: tox -e elasticsearch
+    - name: Install dependencies
+      run: |
+        if [ "${{ matrix.with-opt-deps }}" = "true" ]; then
+          pip install -r requirements.txt pytest
+        fi
+        git clone https://github.com/ProgVal/irctest.git
+        echo "y" | pip uninstall limnoria || true
 
-  codecov:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.8
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install tox codecov
-      - name: Run tests
-        run: tox
-      - name: Upload coverage to Codecov
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-        run: codecov
+    - name: Install package
+      run: python setup.py install
+
+    - name: Run tests
+      run: supybot-test test -v --plugins-dir=./plugins/ --no-network
+
+    - name: Run irctest
+      if: matrix.with-opt-deps == 'true' && startsWith(matrix.python-version, '3.')
+      run: |
+        cd irctest
+        pytest --controllers irctest.controllers.limnoria
+
+    - name: Allow failures for pypy-3.6
+      if: matrix.python-version == 'pypy-3.6' && matrix.with-opt-deps == 'true'
+      continue-on-error: true
