@@ -1,4 +1,4 @@
-name: Python package
+name: Python CI
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: [3.8, 3.8, 3.8, 3.9]
+        python-version: ['3.8', '3.8']
 
     steps:
     - uses: actions/checkout@v3
@@ -24,15 +24,26 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
+    - name: Cache pip
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements/tests.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip wheel coverage codecov
-        pip install -r requirements.txt pytest pytest-mock
-        python setup.py develop
+        pip install -r requirements/tests.txt
+        pip install coveralls
 
-    - name: Test with pytest
-      run: |
-        coverage run -m pytest -v tests/
-        codecov
+    - name: Run tests
+      run: nosetests --with-coverage --cover-erase --cover-package=temba_client
+
+    - name: Lint with flake8
+      run: flake8
+
+    - name: Coveralls
       env:
-        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+      run: coveralls
