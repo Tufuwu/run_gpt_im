@@ -9,39 +9,24 @@ on:
       - main
 
 jobs:
-  linter:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.8]
+  flake8:
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v2
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: 3.8
       - name: Install dependencies
         run: pip install flake8
-      - name: Run linter
-        run: flake8 etip/
+      - name: Run Flake8
+        run: flake8
 
-  test:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.8, 3.8]
+  dockerfile-lint:
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v2
+      - name: Lint Dockerfile
+        uses: hadolint/hadolint-action@v2
         with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-      - name: Run tests
-        env:
-          DJANGO_SETTINGS_MODULE: etip.settings.dev
-        run: |
-          cd etip/
-          python manage.py test
-
+          dockerfile: ./Dockerfile
