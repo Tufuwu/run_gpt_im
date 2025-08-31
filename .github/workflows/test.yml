@@ -1,4 +1,4 @@
-name: CI
+name: Python package
 
 on:
   push:
@@ -12,35 +12,39 @@ jobs:
   build:
     runs-on: ubuntu-22.04
 
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+    strategy:
+      matrix:
+        python-version: [3.8, 3.8, 3.8]
 
-    - name: Set up Python 3.8
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
-        python-version: 3.8
+        python-version: ${{ matrix.python-version }}
 
     - name: Install dependencies
       run: |
-        sudo apt-get update
-        sudo apt-get -y install verilator libevent-dev libjson-c-dev
+        python -m pip install --upgrade pip
+        pip install bandit flake8 python-coveralls coverage liccheck
+        pip install -r requirements.txt
+        python setup.py bdist_wheel
+        pip install dist/feedgen*
 
-    - name: Get Migen / LiteX / Cores
-      run: |
-        wget https://raw.githubusercontent.com/enjoy-digital/litex/main/litex_setup.py
-        python3 litex_setup.py init install
+    - name: Run tests
+      run: make test
 
-    - name: Install the version being tested
-      run: |
-        python3 setup.py install
+    - name: Check licenses
+      run: liccheck -s .licenses.ini
 
-    - name: Get RISC-V toolchain
+    - name: Run feedgen
       run: |
-        wget https://static.dev.sifive.com/dev-tools/riscv64-unknown-elf-gcc-20171231-x86_64-linux-centos6.tar.gz
-        tar -xvf riscv64-unknown-elf-gcc-20171231-x86_64-linux-centos6.tar.gz
-        echo "$PWD/riscv64-unknown-elf-gcc-20171231-x86_64-linux-centos6/bin/" >> $GITHUB_PATH
+        python -m feedgen
+        python -m feedgen atom
+        python -m feedgen rss
 
-    - name: Run unit tests
-      run: |
-        python setup.py test
+    - name: Upload coverage to Coveralls
+      env:
+        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+      run: coveralls
