@@ -1,4 +1,4 @@
-name: CI
+name: Python package
 
 on:
   push:
@@ -13,35 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8, 3.8, 3.8]
-        django-version: ["Django>=3.0,<3.1", "Django>=2.2,<2.3"]
-        run-web-tests: [true, false]
-        use-custom-model: [true, false]
-        exclude:
-          - python-version: 3.8
-            django-version: "Django>=3.0,<3.1"
-            run-web-tests: false
-            use-custom-model: true
-          - python-version: 3.8
-            django-version: "Django>=3.0,<3.1"
-            run-web-tests: false
-            use-custom-model: false
-          - python-version: 3.8
-            django-version: "Django>=3.0,<3.1"
-            run-web-tests: true
-            use-custom-model: true
-          - python-version: 3.8
-            django-version: "Django>=3.0,<3.1"
-            run-web-tests: true
-            use-custom-model: false
-          - python-version: 3.8
-            django-version: "Django>=3.0,<3.1"
-            run-web-tests: true
-            use-custom-model: true
-          - python-version: 3.8
-            django-version: "Django>=3.0,<3.1"
-            run-web-tests: true
-            use-custom-model: false
+        python-version: [3.8, 3.8, 3.8, 3.8]
+        requirements-file: [minimal_requirements.txt, requirements.txt]
 
     steps:
     - uses: actions/checkout@v3
@@ -53,43 +26,16 @@ jobs:
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install codecov
-        grep -v "^django==" requirements.txt > /tmp/reqs.txt
-        pip install -r /tmp/reqs.txt
-        pip install "${{ matrix.django-version }}" -U
+        pip install -r ${{ matrix.requirements-file }}
+        pip install --upgrade pytest
+        pip install pytest-cov
 
     - name: Run tests
-      run: ./scripts/ci_runtests.sh
+      env:
+        MPLBACKEND: Agg
+      run: python -m pytest --cov=fgivenx
 
     - name: Upload coverage to Codecov
-      if: success()
       uses: codecov/codecov-action@v3
-
-  deploy:
-    if: github.event_name == 'push' && github.ref_type == 'tag' && matrix.run-web-tests == 'true' && matrix.use-custom-model == 'true'
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-
-    - name: Set up Python 3.8
-      uses: actions/setup-python@v4
       with:
-        python-version: 3.8
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install codecov
-        grep -v "^django==" requirements.txt > /tmp/reqs.txt
-        pip install -r /tmp/reqs.txt
-        pip install "Django>=3.0,<3.1" -U
-
-    - name: Build and publish to PyPI
-      env:
-        TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-      run: |
-        python setup.py sdist bdist_wheel
-        twine upload dist/*
-
+        token: ${{ secrets.CODECOV_TOKEN }}
