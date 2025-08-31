@@ -1,4 +1,4 @@
-name: Python application
+name: Python CI
 
 on:
   push:
@@ -11,10 +11,12 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     strategy:
       matrix:
-        python-version: [3.8, 3.8]
+        python-version: [3.8, 3.8, 3.8, 3.9, '3.8']
+        include:
+          - python-version: '3.8'
+            allow-failure: true
 
     steps:
     - uses: actions/checkout@v3
@@ -26,9 +28,12 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install pycryptodome
-        pip install requests
+        python -m pip install --upgrade pip
+        pip install pipenv
+        pipenv install --dev
 
-    - name: Run tests
-      run: |
-        python test.py
+    - name: Lint
+      run: pipenv run lint
+
+    - name: Test
+      run: pipenv run test
