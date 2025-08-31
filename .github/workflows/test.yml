@@ -9,11 +9,11 @@ on:
       - main
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.8', '3.8', '3.8', '3.8', '3.8', '3.9']
+        python-version: [3.9, 3.8, 3.8]
 
     steps:
     - uses: actions/checkout@v3
@@ -25,17 +25,9 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install .
-        pip install -r requirements.txt
-        pip install rednose coverage
+        python -m pip install --upgrade pip
+        pip install . -r requirements.txt
 
-    - name: Test with nosetests
+    - name: Run tests
       run: |
-        nosetests test --rednose --verbosity=3 --with-coverage --cover-package ncclient
-
-    - name: Upload coverage to Coveralls
-      env:
-        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
-      run: |
-        pip install coveralls
-        coveralls
+        pytest
