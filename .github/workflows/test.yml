@@ -1,4 +1,4 @@
-name: Python CI
+name: Python package
 
 on:
   push:
@@ -11,10 +11,19 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     strategy:
       matrix:
-        python-version: ['3.8', '3.8']
+        python-version: [3.8, 3.8, 3.8, 3.9]
+        numpy-version: [1.15.4, 1.15.4, 1.15.4, 1.19.4]
+        include:
+          - python-version: 3.8
+            numpy-version: 1.15.4
+          - python-version: 3.8
+            numpy-version: 1.15.4
+          - python-version: 3.8
+            numpy-version: 1.15.4
+          - python-version: 3.9
+            numpy-version: 1.19.4
 
     steps:
     - uses: actions/checkout@v3
@@ -24,26 +33,11 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Cache pip
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements/tests.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-
     - name: Install dependencies
       run: |
-        pip install -r requirements/tests.txt
-        pip install coveralls
+        python -m pip install --upgrade pip
+        pip install numpy==${{ matrix.numpy-version }} scipy matplotlib>=3 cython>=0.28
+        bash dev/build.sh
 
     - name: Run tests
-      run: nosetests --with-coverage --cover-erase --cover-package=temba_client
-
-    - name: Lint with flake8
-      run: flake8
-
-    - name: Coveralls
-      env:
-        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
-      run: coveralls
+      run: bash dev/test.sh
