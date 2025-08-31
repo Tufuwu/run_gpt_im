@@ -1,4 +1,4 @@
-name: CI
+name: Python package
 
 on:
   push:
@@ -13,12 +13,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        python-version: [3.8, 3.8, 3.8]
-        include:
-          - python-version: 3.8
-            env: TOXENV=cover
-          - python-version: 3.8
-            env: TOXENV=black
+        python-version: [3.8, 3.8, 3.8, 3.9]
 
     steps:
     - uses: actions/checkout@v3
@@ -28,18 +23,30 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
+    - name: Cache pip
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements/testing.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
     - name: Install dependencies
       run: |
-        npm i -g elm
+        python -m pip install --upgrade pip
         pip install tox-travis
+        pip install coveralls
+        pip install -r requirements/testing.txt
 
-    - name: Run tests
-      env:
-        TOXENV: ${{ matrix.env.TOXENV }}
+    - name: Lint with flake8
+      run: |
+        pip install flake8
+        flake8 .
+
+    - name: Test with tox
       run: tox
 
-    - name: Upload coverage to Coveralls
-      if: success()
+    - name: Coveralls
       env:
         COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
       run: coveralls
