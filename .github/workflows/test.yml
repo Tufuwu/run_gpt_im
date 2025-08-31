@@ -9,26 +9,63 @@ on:
       - main
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  test:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        python-version: [3.8, 3.8, 3.8, 3.8, 3.9, pypy-3.6]
+        toxenv:
+          - pre-commit
+          - py38-2.2
+          - py38-2.2
+          - py38-2.2
+          - py38-2.2
+          - pypy-3.6-2.2
+          - py38-3.0
+          - py38-3.0
+          - py38-3.0
+          - pypy-3.6-3.0
+          - py38-3.1
+          - py38-3.1
+          - py38-3.1
+          - pypy-3.6-3.1
+          - py38-3.2
+          - py38-3.2
+          - py38-3.2
+          - py39-3.2
+          - pypy-3.6-3.2
+          - py38-main
+          - py39-main
+          - pypy-3.6-main
+      fail-fast: false
+      allow_failures:
+        - python-version: 3.8
+          toxenv: py38-main
+        - python-version: 3.9
+          toxenv: py39-main
+        - python-version: pypy-3.6
+          toxenv: pypy-3.6-main
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+    - uses: actions/checkout@v3
 
-    - name: Set up Python 3.9
+    - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
+        python-version: ${{ matrix.python-version }}
 
-    - name: Install Docker
-      uses: docker/setup-buildx-action@v2
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install coverage tox
 
-    - name: Build Docker image
-      run: docker build -t draft-kings-fun .
+    - name: Run tests
+      run: tox -e ${{ matrix.toxenv }}
 
-    - name: Run Flake8
-      run: docker run draft-kings-fun flake8 draftfast
-
-    - name: Run Tests
-      run: docker run draft-kings-fun nosetests --with-coverage --cover-package=.
+    - name: Upload coverage to Coveralls
+      if: success()
+      env:
+        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+      run: |
+        pip install coveralls
+        coveralls
