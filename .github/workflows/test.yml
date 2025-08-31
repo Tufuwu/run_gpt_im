@@ -9,11 +9,11 @@ on:
       - main
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        python-version: [3.9, 3.8, 3.8, 3.8]
+        python-version: [3.8, 3.8, 3.8, 3.9]
 
     steps:
     - uses: actions/checkout@v3
@@ -26,10 +26,11 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install .[test] codecov
+        pip install .[test]
 
     - name: Run tests
-      run: ./run-tests.py
+      run: |
+        ./run-tests.py
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
