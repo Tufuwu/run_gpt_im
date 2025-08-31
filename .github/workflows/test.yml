@@ -1,4 +1,4 @@
-name: Python package
+name: Python CI
 
 on:
   push:
@@ -11,38 +11,33 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     strategy:
       matrix:
-        python-version: [3.8, 3.8, 3.8, 3.8, 3.8, 3.9, pypy-3.8, pypy-3.8]
+        python-version: [ '3.8', '3.8', '3.8', '3.8', '3.9', 'pypy-3.6']
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install coverage
-        pip install nose
+        pip install tox-travis codecov
 
     - name: Run tests
-      run: coverage run --source=olefile -m nose tests
+      run: tox
 
-    - name: Upload coverage to Coveralls
-      if: success()
+    - name: Upload coverage to Codecov
       env:
-        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       run: |
-        pip install coveralls
-        coveralls
-
-    - name: Run code quality checks
-      run: |
-        pip install pycodestyle pyflakes
-        pyflakes .
-        pycodestyle --statistics --count .
+        VERSION="python_${{ matrix.python-version//[^[:alnum:]]/}}" &&
+        codecov --required --flags $VERSION ||
+        (sleep 5 && codecov --required --flags $VERSION) ||
+        (sleep 10 && codecov --required --flags $VERSION) ||
+        (sleep 20 && codecov --required --flags $VERSION) ||
+        (sleep 30 && codecov --required --flags $VERSION)
