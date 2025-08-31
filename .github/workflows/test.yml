@@ -14,7 +14,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: [3.8, 3.8, 3.8]
+        python-version: [3.8, 3.8]
 
     steps:
     - uses: actions/checkout@v3
@@ -25,7 +25,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Install dependencies
-      run: pip install flask peewee
+      run: pip install peewee wtforms
 
     - name: Run tests
       run: python runtests.py
