@@ -9,23 +9,25 @@ on:
       - main
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        python-version: [3.8, pypy-3.8]
+        toxenv: [pep8, py3]
 
     steps:
     - uses: actions/checkout@v3
 
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: '3.x'
 
     - name: Install dependencies
-      run: pip install -r requirements.txt
+      run: pip install -U tox
 
-    - name: Run tests
-      run: python setup.py test
+    - name: Run Tox
+      env:
+        TOXENV: ${{ matrix.toxenv }}
+      run: tox
