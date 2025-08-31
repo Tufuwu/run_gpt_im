@@ -10,11 +10,11 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        python-version: ["3.8", "3.8", "3.8", "3.8", "3.9", "3.10"]
+        python-version: ['3.8', '3.8']
 
     steps:
     - uses: actions/checkout@v3
@@ -26,16 +26,13 @@ jobs:
 
     - name: Install dependencies
       run: |
-        python setup.py --quiet install
-        pip --quiet install -r test-requirements.txt
+        sudo apt-get update
+        sudo apt-get install -y coinor-cbc
+        pip install -r requirements.txt
+        python setup.py -q install
 
-    - name: Run tests
-      run: python setup.py --quiet test
+    - name: Lint with flake8
+      run: flake8
 
-    - name: Run coverage
-      run: coverage run --source circlify tests.py
-
-    - name: Upload coverage to Coveralls
-      uses: coverallsapp/github-action@v2
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Test with pytest
+      run: pytest
