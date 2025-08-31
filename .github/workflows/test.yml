@@ -1,4 +1,4 @@
-name: Python package
+name: Python application
 
 on:
   push:
@@ -9,12 +9,12 @@ on:
       - main
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        python-version: [3.8, 3.8]
+        python-version: [3.8]
 
     steps:
     - uses: actions/checkout@v3
@@ -25,7 +25,18 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Install dependencies
-      run: pip install . --upgrade
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements/ci.txt
 
-    - name: Run tests
-      run: ./runtests.sh
+    - name: Run tests with coverage
+      run: |
+        coverage run manage.py test
+        coverage report
+        coverage xml
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        files: coverage/coverage.xml
+        token: ${{ secrets.CODECOV_TOKEN }}
