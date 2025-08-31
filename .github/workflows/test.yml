@@ -9,29 +9,44 @@ on:
       - main
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8, 3.8, 3.8, 3.8, pypy-3.6]
+        python-version: [3.8, 3.8, 3.8, 3.8, 3.8, 3.8, 3.9]
+        toxenv: [py38, py38, py38, py38, py38, py38, py39, qa, doc]
+        include:
+          - python-version: 3.8
+            toxenv: py38
+          - python-version: 3.8
+            toxenv: py38
+          - python-version: 3.8
+            toxenv: py38
+          - python-version: 3.8
+            toxenv: py38
+          - python-version: 3.8
+            toxenv: py38
+          - python-version: 3.8
+            toxenv: py38
+          - python-version: 3.9
+            toxenv: py39
+          - python-version: 3.8
+            toxenv: qa
+          - python-version: 3.8
+            toxenv: doc
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Install dependencies
       run: |
-        pip install -r test-requirements.txt
-        pip install -e .
+        python -m pip install --upgrade pip setuptools
+        pip install tox
 
     - name: Run tests
-      run: nosetests -q --with-coverage --cover-package=pycron
-
-    - name: Upload coverage to Coveralls
-      env:
-        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
-      run: coveralls
+      run: tox -e ${{ matrix.toxenv }}
