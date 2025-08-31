@@ -13,67 +13,33 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8, 3.8, 3.9]
+        python-version: [3.8, 3.8, 3.8, 3.8, '3.8']
+        django-version: [2.2, 3.0, 'main']
+        include:
+          - python-version: 3.8
+            toxenv: docs
+          - python-version: 3.8
+            toxenv: quality
+      allow_failures:
+        - python-version: '3.8'
+        - django-version: 'main'
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
-        pip install -r tests/requirements.txt
-        python setup.py -q install
-    - name: Run tests
-      run: nosetests --with-coverage --cover-package=btcde
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
+      - uses: actions/checkout@v3
 
-  test-release:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python 3.8
-      uses: actions/setup-python@v4
-      with:
-        python-version: 3.8
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
-        pip install -r tests/requirements.txt
-        python setup.py -q install
-    - name: Deploy to Test PyPI
-      env:
-        TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.TEST_PYPI_TOKEN }}
-      run: |
-        python -m pip install --upgrade twine
-        python setup.py sdist bdist_wheel
-        twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
 
-  release:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/tags/*'
-    steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python 3.8
-      uses: actions/setup-python@v4
-      with:
-        python-version: 3.8
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
-        pip install -r tests/requirements.txt
-        python setup.py -q install
-    - name: Deploy to PyPI
-      env:
-        TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
-      run: |
-        python -m pip install --upgrade twine
-        python setup.py sdist bdist_wheel
-        twine upload dist/*
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install tox
+
+      - name: Run tests
+        run: |
+          if [ -n "${{ matrix.toxenv }}" ]; then
+            tox -e ${{ matrix.toxenv }}
+          else
+            tox
+          fi
